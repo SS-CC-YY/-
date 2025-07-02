@@ -8,14 +8,14 @@
 
 ## 使用方式
 (可选) 建议先创建虚拟环境，防止原生环境被污染以及遇到一些意料之外的问题
-使用venv:\\
-``python -m venv ENV_DIR``\\
-``source ENV_DIR/bin/activate``(linux) ``.\ENV_DIR\Scripts\activate``(WINDOWS)\\
-``deactivate``\\
-使用conda：\\
-``conda create -n ENV_NAME python-x.x``\\
-``conda activate ENV_NAME``\\
-``conda deactivate``\\
+使用venv:  
+``python -m venv ENV_DIR``  
+``source ENV_DIR/bin/activate``(linux) ``.\ENV_DIR\Scripts\activate``(WINDOWS)  
+``deactivate``  
+使用conda：  
+``conda create -n ENV_NAME python-x.x``  
+``conda activate ENV_NAME``  
+``conda deactivate``  
 
 1. 安装必要的库： ``pip install requirements.txt``
 2. 由于考虑到部分学生提交的作业压缩包是rar格式，因此需要在环境中引入rar包。仓库中有自带的rar包，需要将其中的``libunrar.so``放入到``~/.local/lib``中，或者直接修改utils.utils中的环境变量。
@@ -40,5 +40,5 @@
 
 
 ## 引用
-Saul Schleimer, Daniel S. Wilkerson, and Alex Aiken. 2003. Winnowing: local algorithms for document fingerprinting. In Proceedings of the 2003 ACM SIGMOD international conference on Management of data (SIGMOD '03). Association for Computing Machinery, New York, NY, USA, 76–85. https://doi.org/10.1145/872757.872770\\
+Saul Schleimer, Daniel S. Wilkerson, and Alex Aiken. 2003. Winnowing: local algorithms for document fingerprinting. In Proceedings of the 2003 ACM SIGMOD international conference on Management of data (SIGMOD '03). Association for Computing Machinery, New York, NY, USA, 76–85. https://doi.org/10.1145/872757.872770  
 电子版文档可从stanford官网上找到：https://theory.stanford.edu/~aiken/publications/papers/sigmod03.pdf
