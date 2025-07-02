@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>代码相似度分析报告</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>代码相似度分析报告</h1>
+        <div class="timestamp">生成时间: {{ report_data.timestamp }}</div>
+    </header>
+
+    <!-- 筛选面板 -->
+    <div class="section">
+        <h2>筛选选项</h2>
+        <div class="filter-panel">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="filter-experiment">实验</label>
+                    <select id="filter-experiment" class="filter-select">
+                        <option value="">所有实验</option>
+                        {% for exp in report_data.experiments %}
+                        <option value="{{ exp }}">{{ exp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-year">年份</label>
+                    <select id="filter-year" class="filter-select">
+                        <option value="">所有年份</option>
+                        {% for year in report_data.years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-class">班级</label>
+                    <select id="filter-class" class="filter-select">
+                        <option value="">所有班级</option>
+                        {% for cls in report_data.classes %}
+                        <option value="{{ cls }}">{{ cls }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-target">目标小组</label>
+                    <input type="text" id="filter-target" class="target-group-input" placeholder="输入小组名称">
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button class="filter-btn apply" onclick="applyFilters()">应用筛选</button>
+                <button class="filter-btn reset" onclick="resetFilters()">重置筛选</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局结果 -->
+    <div class="section">
+        <h2>相似度分析</h2>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" data-tab="global-winnowing">Winnowing算法</div>
+                <div class="tab" data-tab="global-tfidf">TF-IDF算法</div>
+                <div class="tab" data-tab="global-report">报告相似度</div>
+            </div>
+            
+            <!-- Winnowing算法结果 -->
+            <div class="tab-content active" id="global-winnowing">
+                <div class="controls">
+                    <div class="global-top-control">
+                        <h3>代码相似度Top结果 (Winnowing算法)</h3>
+                        <div class="sort-control">
+                            <label for="global-winnowing-top-n">显示前</label>
+                            <input type="number" id="global-winnowing-top-n" min="1" max="500" value="20" 
+                                    onchange="applyFilters()">
+                            <span>个相似组</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>实验</th>
+                            <th>小组1</th>
+                            <th>小组2</th>
+                            <th>相似度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-winnowing-table">
+                        {% for match in report_data.global_results.code_winnowing %}
+                        <tr class="{% if match.similarity_percent >= 35 %}similarity-critical{% endif %}"
+                            data-experiment="{{ match.experiment }}"
+                            data-year1="{{ match.year1 }}"
+                            data-year2="{{ match.year2 }}"
+                            data-class1="{{ match.class1 }}"
+                            data-class2="{{ match.class2 }}"
+                            data-path1="{{ match.path1 }}"
+                            data-path2="{{ match.path2 }}"
+                            data-original-group1="{{ match.group1 }}"
+                            data-original-group2="{{ match.group2 }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ match.experiment }}</td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ match.year1 }}年 {{ match.class1 }}</div>
+                                    <div class="group-members">{{ match.group1 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ match.year2 }}年 {{ match.class2 }}</div>
+                                    <div class="group-members">{{ match.group2 }}</div>
+                                </div>
+                            </td>
+                            <td>{{ match.similarity_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- TF-IDF算法结果 -->
+            <div class="tab-content" id="global-tfidf">
+                <div class="controls">
+                    <div class="global-top-control">
+                        <h3>代码相似度Top结果 (TF-IDF算法)</h3>
+                        <div class="sort-control">
+                            <label for="global-tfidf-top-n">显示前</label>
+                            <input type="number" id="global-tfidf-top-n" min="1" max="500" value="20" 
+                                    onchange="applyFilters()">
+                            <span>个相似组</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>实验</th>
+                            <th>小组1</th>
+                            <th>小组2</th>
+                            <th>相似度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-tfidf-table">
+                        {% for match in report_data.global_results.code_tfidf %}
+                        <tr class="{% if match.similarity_percent >= 80 %}similarity-critical{% endif %}"
+                            data-experiment="{{ match.experiment }}"
+                            data-year1="{{ match.year1 }}"
+                            data-year2="{{ match.year2 }}"
+                            data-class1="{{ match.class1 }}"
+                            data-class2="{{ match.class2 }}"
+                            data-path1="{{ match.path1 }}"
+                            data-path2="{{ match.path2 }}"
+                            data-original-group1="{{ match.group1 }}"
+                            data-original-group2="{{ match.group2 }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ match.experiment }}</td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ match.year1 }}年 {{ match.class1 }}</div>
+                                    <div class="group-members">{{ match.group1 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ match.year2 }}年 {{ match.class2 }}</div>
+                                    <div class="group-members">{{ match.group2 }}</div>
+                                </div>
+                            </td>
+                            <td>{{ match.similarity_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 报告相似度结果 -->
+            <div class="tab-content" id="global-report">
+                <div class="controls">
+                    <div class="global-top-control">
+                        <h3>报告相似度Top结果</h3>
+                        <div class="sort-control">
+                            <label for="global-report-top-n">显示前</label>
+                            <input type="number" id="global-report-top-n" min="1" max="500" value="20" 
+                                    onchange="applyFilters()">
+                            <span>个相似组</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>实验</th>
+                            <th>小组1</th>
+                            <th>小组2</th>
+                            <th>相似度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-report-table">
+                        {% for match in report_data.global_results.report_winnowing %}
+                        {% set similarity_class = "" %}
+                        {% if match.similarity_percent >= 20 %}
+                            {% set similarity_class = "similarity-critical" %}
+                        {% elif match.similarity_percent >= 15 %}
+                            {% set similarity_class = "similarity-moderate" %}
+                        {% elif match.similarity_percent >= 10 %}
+                            {% set similarity_class = "similarity-mild" %}
+                        {% endif %}
+                        <tr class="{{ similarity_class }}"
+                            data-experiment="{{ match.experiment }}"
+                            data-year1="{{ match.year1 }}"
+                            data-year2="{{ match.year2 }}"
+                            data-class1="{{ match.class1 }}"
+                            data-class2="{{ match.class2 }}"
+                            data-path1="{{ match.path1 }}"
+                            data-path2="{{ match.path2 }}"
+                            data-original-group1="{{ match.group1 }}"
+                            data-original-group2="{{ match.group2 }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ match.experiment }}</td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ match.year1 }}年 {{ match.class1 }}</div>
+                                    <div class="group-members">{{ match.group1 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ match.year2 }}年 {{ match.class2 }}</div>
+                                    <div class="group-members">{{ match.group2 }}</div>
+                                </div>
+                            </td>
+                            <td>{{ match.similarity_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储原始数据
+        let originalData = {
+            winnowing: [],
+            tfidf: [],
+            report: []
+        };
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 保存原始数据
+            originalData.winnowing = Array.from(document.querySelectorAll('#global-winnowing-table tr'));
+            originalData.tfidf = Array.from(document.querySelectorAll('#global-tfidf-table tr'));
+            originalData.report = Array.from(document.querySelectorAll('#global-report-table tr'));
+
+            // 设置默认筛选值
+            const urlParams = new URLSearchParams(window.location.search);
+            const experiment = urlParams.get('experiment');
+            const year = urlParams.get('year');
+            const cls = urlParams.get('class');
+            const targetGroup = urlParams.get('target_group');
+            
+            if (experiment) document.getElementById('filter-experiment').value = experiment;
+            if (year) document.getElementById('filter-year').value = year;
+            if (cls) document.getElementById('filter-class').value = cls;
+            if (targetGroup) document.getElementById('filter-target').value = targetGroup;
+            
+            // 应用初始筛选
+            applyFilters();
+            
+            // 绑定标签页事件
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    const container = this.closest('.tab-container');
+                    
+                    // 移除所有active类
+                    container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // 添加active类到当前tab
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        });
+        
+        function applyFilters() {
+            const experiment = document.getElementById('filter-experiment').value;
+            const year = document.getElementById('filter-year').value;
+            const cls = document.getElementById('filter-class').value;
+            const targetGroup = document.getElementById('filter-target').value.trim();
+            
+            // 获取行数限制值
+            const winnowingN = parseInt(document.getElementById('global-winnowing-top-n').value) || 20;
+            const tfidfN = parseInt(document.getElementById('global-tfidf-top-n').value) || 20;
+            const reportN = parseInt(document.getElementById('global-report-top-n').value) || 20;
+            
+            // 更新URL
+            const url = new URL(window.location);
+            url.searchParams.set('experiment', experiment);
+            url.searchParams.set('year', year);
+            url.searchParams.set('class', cls);
+            url.searchParams.set('target_group', targetGroup);
+            window.history.replaceState({}, '', url);
+            
+            // 处理所有表格
+            filterTable('global-winnowing-table', 'winnowing', winnowingN);
+            filterTable('global-tfidf-table', 'tfidf', tfidfN);
+            filterTable('global-report-table', 'report', reportN);
+        }
+        
+        // 筛选表格并调整小组位置
+        function filterTable(tableId, dataKey, maxRows) {
+            const tbody = document.getElementById(tableId);
+            tbody.innerHTML = '';
+            
+            const rows = originalData[dataKey];
+            let visibleCount = 0;
+            
+            rows.forEach((row, index) => {
+                // 跳过表头
+                if (row.querySelector('th')) return;
+                
+                // 获取筛选条件
+                const experiment = document.getElementById('filter-experiment').value;
+                const year = document.getElementById('filter-year').value;
+                const cls = document.getElementById('filter-class').value;
+                const targetGroup = document.getElementById('filter-target').value.trim();
+                
+                // 获取行属性
+                const rowExp = row.getAttribute('data-experiment');
+                const rowYear1 = row.getAttribute('data-year1');
+                const rowYear2 = row.getAttribute('data-year2');
+                const rowClass1 = row.getAttribute('data-class1');
+                const rowClass2 = row.getAttribute('data-class2');
+                const rowPath1 = row.getAttribute('data-path1');
+                const rowPath2 = row.getAttribute('data-path2');
+                const originalGroup1 = row.getAttribute('data-original-group1');
+                const originalGroup2 = row.getAttribute('data-original-group2');
+                
+                // 获取小组名称
+                const group1 = originalGroup1;
+                const group2 = originalGroup2;
+                
+                // 检查筛选条件
+                const expMatch = !experiment || rowExp === experiment;
+                const yearMatch = !year || rowYear1 === year || rowYear2 === year;
+                const classMatch = !cls || rowClass1 === cls || rowClass2 === cls;
+                const groupMatch = !targetGroup || 
+                                group1.includes(targetGroup) || 
+                                group2.includes(targetGroup) ||
+                                rowPath1.includes(targetGroup) || 
+                                rowPath2.includes(targetGroup);
+                
+                // 确定是否显示
+                const shouldShow = expMatch && yearMatch && classMatch && groupMatch;
+                
+                if (shouldShow && visibleCount < maxRows) {
+                    // 克隆行以便修改
+                    const newRow = row.cloneNode(true);
+                    
+                    // 确定哪个小组满足条件
+                    const group1Satisfies = (
+                        (!experiment || rowExp === experiment) &&
+                        (!year || rowYear1 === year) &&
+                        (!cls || rowClass1 === cls) &&
+                        (!targetGroup || group1.includes(targetGroup) || rowPath1.includes(targetGroup))
+                    );
+                    
+                    const group2Satisfies = (
+                        (!experiment || rowExp === experiment) &&
+                        (!year || rowYear2 === year) &&
+                        (!cls || rowClass2 === cls) &&
+                        (!targetGroup || group2.includes(targetGroup) || rowPath2.includes(targetGroup))
+                    );
+                    
+                    // 如果小组2满足条件但小组1不满足，交换位置
+                    if (group2Satisfies && !group1Satisfies) {
+                        const cells = newRow.querySelectorAll('td');
+                        
+                        // 交换小组1和小组2的单元格内容
+                        const group1Cell = cells[2];
+                        const group2Cell = cells[3];
+                        
+                        // 保存原始内容
+                        const group1Content = group1Cell.innerHTML;
+                        const group2Content = group2Cell.innerHTML;
+                        
+                        // 交换内容
+                        group1Cell.innerHTML = group2Content;
+                        group2Cell.innerHTML = group1Content;
+                        
+                        // 更新属性
+                        newRow.setAttribute('data-year1', rowYear2);
+                        newRow.setAttribute('data-year2', rowYear1);
+                        newRow.setAttribute('data-class1', rowClass2);
+                        newRow.setAttribute('data-class2', rowClass1);
+                        newRow.setAttribute('data-path1', rowPath2);
+                        newRow.setAttribute('data-path2', rowPath1);
+                        newRow.setAttribute('data-original-group1', originalGroup2);
+                        newRow.setAttribute('data-original-group2', originalGroup1);
+                    }
+                    
+                    // 更新排名
+                    const rankCell = newRow.querySelector('td:first-child');
+                    rankCell.textContent = visibleCount + 1;
+                    
+                    tbody.appendChild(newRow);
+                    visibleCount++;
+                }
+            });
+        }
+        
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('filter-experiment').value = '';
+            document.getElementById('filter-year').value = '';
+            document.getElementById('filter-class').value = '';
+            document.getElementById('filter-target').value = '';
+            
+            // 重置行数输入框
+            document.getElementById('global-winnowing-top-n').value = 20;
+            document.getElementById('global-tfidf-top-n').value = 20;
+            document.getElementById('global-report-top-n').value = 20;
+            
+            applyFilters();
+        }
+    </script>
+</body>
+</html>

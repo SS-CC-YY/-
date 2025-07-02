@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>代码相似度分析报告</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>代码相似度分析报告</h1>
+        <div class="timestamp">生成时间: {{ report_data.timestamp }}</div>
+    </header>
+
+    <!-- 筛选面板 -->
+    <div class="section">
+        <h2>筛选选项</h2>
+        <div class="filter-panel">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="filter-experiment">实验</label>
+                    <select id="filter-experiment" class="filter-select">
+                        <option value="">所有实验</option>
+                        {% for exp in report_data.experiments %}
+                        <option value="{{ exp }}">{{ exp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-class">班级</label>
+                    <select id="filter-class" class="filter-select">
+                        <option value="">所有班级</option>
+                        {% for cls in report_data.classes %}
+                        <option value="{{ cls }}">{{ cls }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-target">目标小组</label>
+                    <input type="text" id="filter-target" class="target-group-input" placeholder="输入小组名称">
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button class="filter-btn apply" onclick="applyFilters()">应用筛选</button>
+                <button class="filter-btn reset" onclick="resetFilters()">重置筛选</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局结果 -->
+    <div class="section">
+        <h2>全局相似度分析</h2>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" data-tab="global-winnowing">Winnowing算法</div>
+                <div class="tab" data-tab="global-tfidf">TF-IDF算法</div>
+                <div class="tab" data-tab="global-report">报告相似度</div>
+            </div>
+            
+            <!-- Winnowing算法结果 -->
+            <div class="tab-content active" id="global-winnowing">
+                <div class="controls">
+                    <div class="global-top-control">
+                        <h3>代码相似度Top结果 (Winnowing算法)</h3>
+                        <div class="sort-control">
+                            <label for="global-winnowing-top-n">显示前</label>
+                            <input type="number" id="global-winnowing-top-n" min="1" max="500" value="100" 
+                                   onchange="updateTable('global-winnowing-table', this.value)">
+                            <span>个相似组</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>实验</th>
+                            <th>小组1</th>
+                            <th>小组2</th>
+                            <th>相似度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-winnowing-table">
+                        {% for match in report_data.global_results.code_winnowing %}
+                        {% set group1_info = report_data.all_groups_info.get(match.group1, {}) %}
+                        {% set group2_info = report_data.all_groups_info.get(match.group2, {}) %}
+                        <tr class="{% if match.similarity_percent >= 35 %}similarity-critical{% endif %}"
+                            data-experiment="{{ match.experiment }}"
+                            data-class1="{{ group1_info.class }}"
+                            data-class2="{{ group2_info.class }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ match.experiment }}</td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ group1_info.class }}班</div>
+                                    <div class="group-members">{{ match.group1 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ group2_info.class }}班</div>
+                                    <div class="group-members">{{ match.group2 }}</div>
+                                </div>
+                            </td>
+                            <td>{{ match.similarity_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- TF-IDF算法结果 -->
+            <div class="tab-content" id="global-tfidf">
+                <div class="controls">
+                    <div class="global-top-control">
+                        <h3>代码相似度Top结果 (TF-IDF算法)</h3>
+                        <div class="sort-control">
+                            <label for="global-tfidf-top-n">显示前</label>
+                            <input type="number" id="global-tfidf-top-n" min="1" max="500" value="100" 
+                                   onchange="updateTable('global-tfidf-table', this.value)">
+                            <span>个相似组</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>实验</th>
+                            <th>小组1</th>
+                            <th>小组2</th>
+                            <th>相似度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-tfidf-table">
+                        {% for match in report_data.global_results.code_tfidf %}
+                        {% set group1_info = report_data.all_groups_info.get(match.group1, {}) %}
+                        {% set group2_info = report_data.all_groups_info.get(match.group2, {}) %}
+                        <tr class="{% if match.similarity_percent >= 35 %}similarity-critical{% endif %}"
+                            data-experiment="{{ match.experiment }}"
+                            data-class1="{{ group1_info.class }}"
+                            data-class2="{{ group2_info.class }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ match.experiment }}</td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ group1_info.class }}班</div>
+                                    <div class="group-members">{{ match.group1 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ group2_info.class }}班</div>
+                                    <div class="group-members">{{ match.group2 }}</div>
+                                </div>
+                            </td>
+                            <td>{{ match.similarity_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 报告相似度结果 -->
+            <div class="tab-content" id="global-report">
+                <div class="controls">
+                    <div class="global-top-control">
+                        <h3>报告相似度Top结果</h3>
+                        <div class="sort-control">
+                            <label for="global-report-top-n">显示前</label>
+                            <input type="number" id="global-report-top-n" min="1" max="500" value="100" 
+                                   onchange="updateTable('global-report-table', this.value)">
+                            <span>个相似组</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>实验</th>
+                            <th>小组1</th>
+                            <th>小组2</th>
+                            <th>相似度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-report-table">
+                        {% for match in report_data.global_results.report_winnowing %}
+                        {% set group1_info = report_data.all_groups_info.get(match.group1, {}) %}
+                        {% set group2_info = report_data.all_groups_info.get(match.group2, {}) %}
+                        {% set similarity_class = "" %}
+                        {% if match.similarity_percent >= 20 %}
+                            {% set similarity_class = "similarity-critical" %}
+                        {% elif match.similarity_percent >= 15 %}
+                            {% set similarity_class = "similarity-moderate" %}
+                        {% elif match.similarity_percent >= 10 %}
+                            {% set similarity_class = "similarity-mild" %}
+                        {% endif %}
+                        <tr class="{{ similarity_class }}"
+                            data-experiment="{{ match.experiment }}"
+                            data-class1="{{ group1_info.class }}"
+                            data-class2="{{ group2_info.class }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ match.experiment }}</td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ group1_info.class }}班</div>
+                                    <div class="group-members">{{ match.group1 }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="group-info">
+                                    <div class="group-meta">{{ group2_info.class }}班</div>
+                                    <div class="group-members">{{ match.group2 }}</div>
+                                </div>
+                            </td>
+                            <td>{{ match.similarity_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认筛选值
+            const urlParams = new URLSearchParams(window.location.search);
+            const experiment = urlParams.get('experiment');
+            const cls = urlParams.get('class');
+            const targetGroup = urlParams.get('target_group');
+            
+            if (experiment) document.getElementById('filter-experiment').value = experiment;
+            if (cls) document.getElementById('filter-class').value = cls;
+            if (targetGroup) document.getElementById('filter-target').value = targetGroup;
+            
+            // 应用初始筛选
+            applyFilters();
+            
+            // 绑定标签页事件
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    const container = this.closest('.tab-container');
+                    
+                    // 移除所有active类
+                    container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // 添加active类到当前tab
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        });
+        
+        // 更新表格显示行数
+        function updateTable(tableId, n) {
+            const rows = document.querySelectorAll(`#${tableId} tr`);
+            let visibleCount = 0;
+            
+            rows.forEach((row, index) => {
+                // 跳过表头
+                if (row.querySelector('th')) return;
+                
+                if (visibleCount < n) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // 应用筛选
+        function applyFilters() {
+            const experiment = document.getElementById('filter-experiment').value;
+            const cls = document.getElementById('filter-class').value;
+            const targetGroup = document.getElementById('filter-target').value.trim();
+            
+            // 更新URL
+            const url = new URL(window.location);
+            url.searchParams.set('experiment', experiment);
+            url.searchParams.set('class', cls);
+            url.searchParams.set('target_group', targetGroup);
+            window.history.replaceState({}, '', url);
+            
+            // 更新所有表格
+            updateTable('global-winnowing-table', document.getElementById('global-winnowing-top-n').value);
+            updateTable('global-tfidf-table', document.getElementById('global-tfidf-top-n').value);
+            updateTable('global-report-table', document.getElementById('global-report-top-n').value);
+            
+            // 筛选所有表格
+            document.querySelectorAll('#global-winnowing-table tr, #global-tfidf-table tr, #global-report-table tr').forEach(row => {
+                // 跳过表头
+                if (row.querySelector('th')) return;
+                
+                const rowExp = row.getAttribute('data-experiment');
+                const rowClass1 = row.getAttribute('data-class1');
+                const rowClass2 = row.getAttribute('data-class2');
+                
+                // 检查实验筛选
+                const expMatch = !experiment || rowExp === experiment;
+                
+                // 检查班级筛选
+                const classMatch = !cls || rowClass1 === cls || rowClass2 === cls;
+                
+                // 检查小组筛选
+                const group1 = row.querySelector('td:nth-child(3)').textContent;
+                const group2 = row.querySelector('td:nth-child(4)').textContent;
+                const groupMatch = !targetGroup || group1.includes(targetGroup) || group2.includes(targetGroup);
+                
+                if (expMatch && classMatch && groupMatch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('filter-experiment').value = '';
+            document.getElementById('filter-class').value = '';
+            document.getElementById('filter-target').value = '';
+            applyFilters();
+        }
+    </script>
+</body>
+</html>
